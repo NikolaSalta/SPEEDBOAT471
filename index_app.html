@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="471 כל המבחנים">
 <meta name="theme-color" content="#1a1208">
+<link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a1208'/><text x='50' y='38' text-anchor='middle' fill='%23c8983a' font-size='28' font-weight='900'>471</text><text x='50' y='62' text-anchor='middle' fill='%23f5e6c8' font-size='14' font-weight='700'>בגרות</text></svg>">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='36' fill='%231a1208'/><text x='90' y='70' text-anchor='middle' fill='%23c8983a' font-size='50' font-weight='900' font-family='sans-serif'>471</text><text x='90' y='110' text-anchor='middle' fill='%23f5e6c8' font-size='24' font-weight='700' font-family='sans-serif'>&#1489;&#1490;&#1512;&#1493;&#1514;</text><text x='90' y='145' text-anchor='middle' fill='%23c8983a' font-size='16' font-family='sans-serif'>141</text></svg>">
 <meta name="description" content="141 שאלות מ-18 מבחני בגרות 471 עם פתרונות מלאים">
 <title>471 — כל המבחנים</title>
 <style>
@@ -184,24 +184,6 @@ body{font-family:'Frank Ruhl Libre',Georgia,serif;background:#f5f2ed;color:#1a12
 .exam-filter-btn{flex:1;padding:5px 8px;border:1px solid #e0d8d0;border-radius:6px;background:transparent;color:#6b5e4a;font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;text-align:center;transition:all .15s}
 .exam-filter-btn:hover{border-color:#c8983a;color:#8a6820}
 .exam-filter-btn.active{background:#1a1208;color:#c8983a;border-color:#1a1208;font-weight:700}
-
-
-/* ── iPhone Optimizations ── */
-html{overscroll-behavior:none;-webkit-text-size-adjust:100%}
-body{-webkit-touch-callout:none}
-.sbtn,.bnav-btn,.hint-btn,.unlock-btn,.exam-filter-btn,.sec-head{min-height:44px}
-.bnav-btn{min-width:64px;padding:8px 12px}
-.topbar{padding-top:env(safe-area-inset-top,0px);height:calc(56px + env(safe-area-inset-top,0px))}
-.app-body{top:calc(56px + env(safe-area-inset-top,0px))}
-.bottom-nav{padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
-@media(display-mode:standalone){
-  .topbar{padding-top:calc(env(safe-area-inset-top,20px));height:calc(56px + env(safe-area-inset-top,20px))}
-  .app-body{top:calc(56px + env(safe-area-inset-top,20px))}
-}
-@supports(-webkit-touch-callout:none){
-  .content{-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
-  .sidebar{-webkit-overflow-scrolling:touch}
-}
 
 /* ── RESPONSIVE ── */
 @media(max-width:700px){
@@ -3441,8 +3423,274 @@ const QUESTIONS = [
 }
 ];
 
-const IMAGES = {}; // Images removed for size — see full version
+const IMAGES = {};
 
+// ── STATE ─────────────────────────────────────────
+var currentIdx = 0;
+var unlocked = {};
+var revealed = {};
+var currentFilter = 'all';
+var SEC_NAMES = ['hints','pattern','story','solution'];
+var EXAM_LABELS = {
+  'special2021': 'מיוחד 21',
+  'winter2026': 'חורף 26',
+  'summer2020a': 'קיץ 20א',
+  'summer2020b': 'קיץ 20ב',
+  'summer2021b': 'קיץ 21ב',
+  'summer2022a': 'קיץ 22א',
+  'summer2022b': 'קיץ 22ב',
+  'summer2023a': 'קיץ 23א',
+  'summer2023b': 'קיץ 23ב',
+  'summer2023sp': 'נבצרים 23',
+  'summer2024b': 'קיץ 24ב',
+  'summer2025b': 'קיץ 25ב',
+  'winter2021': 'חורף 21',
+  'winter2022': 'חורף 22',
+  'winter2022feb': 'חורף 22פב',
+  'winter2023': 'חורף 23',
+  'winter2024': 'חורף 24',
+  'winter2025': 'חורף 25'
+};
+
+function getUnlocked(i){if(!unlocked[i])unlocked[i]=new Set(['question','hints']);return unlocked[i];}
+function setHas(s,v){try{return s.has(v);}catch(e){return false;}}
+
+function filteredQuestions(){
+  if(currentFilter==='all') return QUESTIONS;
+  return QUESTIONS.filter(function(q){return q.examId===currentFilter;});
+}
+
+// ── SIDEBAR ─────────────────────────────────────────
+function buildSidebar(){
+  var fq = filteredQuestions();
+  var list = document.getElementById('sidebarList');
+  var html = '';
+  var lastExam = '';
+  
+  fq.forEach(function(q, fi){
+    var globalIdx = QUESTIONS.indexOf(q);
+    if(q.examId !== lastExam){
+      lastExam = q.examId;
+      html += '<div class="exam-group">';
+      html += '<div class="exam-header"><div class="exam-header-title">'+(EXAM_LABELS[q.examId]||q.examId)+'</div></div>';
+    }
+    var isActive = globalIdx === currentIdx;
+    var isDone = unlocked[globalIdx] && setHas(unlocked[globalIdx],'solution');
+    html += '<button class="sbtn'+(isActive?' active':'')+(isDone?' done':'') +'" onclick="showQ('+globalIdx+')">';
+    html += '<span class="sb-n">'+q.id+'</span>';
+    html += '<span class="sb-t">'+q.title.replace('פונקציה רציונלית ','')+'</span>';
+    html += '<span class="sb-tag '+q.miykud+'">'+( q.miykud==='yes'?'✅':'❌')+'</span>';
+    html += '</button>';
+  });
+  list.innerHTML = html;
+  
+  // scroll active into view
+  setTimeout(function(){
+    try{var active=list.querySelector('.sbtn.active');if(active)active.scrollIntoView({block:'nearest'});}catch(e){}
+  },50);
+}
+
+function buildBottomNav(){
+  var fq = filteredQuestions();
+  var html = '';
+  fq.forEach(function(q,fi){
+    var gIdx = QUESTIONS.indexOf(q);
+    var isActive = gIdx === currentIdx;
+    html += '<button class="bnav-btn'+(isActive?' active':'')+'" onclick="showQ('+gIdx+')">';
+    html += '<span class="bnav-btn-num">'+q.id+'</span>';
+    var lbl = q.title.split('—')[0].trim().substring(0,6);
+    html += '<span class="bnav-btn-lbl">'+lbl+'</span></button>';
+  });
+  document.getElementById('bottomNav').innerHTML = html;
+}
+
+// ── SHOW QUESTION ─────────────────────────────────────────
+function showQ(globalIdx){
+  currentIdx = globalIdx;
+  var q = QUESTIONS[globalIdx];
+  
+  document.getElementById('topbarSub').textContent = (EXAM_LABELS[q.examId]||q.examId) + ' | שאלה ' + q.id;
+  var fq = filteredQuestions();
+  var localIdx = fq.indexOf(q);
+  var total = fq.length;
+  document.getElementById('progFill').style.width = ((localIdx+1)/total*100)+'%';
+  document.getElementById('progCounter').textContent = (localIdx+1)+'/'+total;
+  
+  renderQ(globalIdx);
+  buildSidebar();
+  buildBottomNav();
+  var ca = document.getElementById('contentArea');
+  if(ca) ca.scrollTop=0;
+}
+
+function filterExam(examId){
+  currentFilter = examId;
+  // Update filter buttons
+  ['all','special2021','winter2026','summer2020a','summer2020b','summer2021b','summer2022a','summer2022b','summer2023a','summer2023b','summer2023sp','summer2024b','summer2025b','winter2021','winter2022','winter2022feb','winter2023','winter2024','winter2025'].forEach(function(id){
+    var btn = document.getElementById('fb-'+id);
+    if(btn) btn.classList.toggle('active', id===examId);
+  });
+  // Jump to first question of this filter
+  var fq = filteredQuestions();
+  if(fq.length > 0){
+    showQ(QUESTIONS.indexOf(fq[0]));
+  }
+}
+
+// ── RENDER ─────────────────────────────────────────
+function renderQ(idx){
+  try{
+  var q = QUESTIONS[idx];
+  var ul = getUnlocked(idx);
+  var h = '';
+
+  // Exam card
+  var imgH = (q.questionImgKey && IMAGES[q.questionImgKey])
+    ? '<div class="q-img"><img src="data:image/png;base64,'+IMAGES[q.questionImgKey]+'" alt=""><div class="q-img-cap">'+(q.questionImgCap||'')+'</div></div>' : '';
+  h += '<div class="exam-card"><div class="ec-head">';
+  h += '<div class="ec-badge">'+q.id+'</div>';
+  h += '<div style="flex:1"><div class="ec-title">'+q.title+'</div><div class="ec-topic">'+q.topic+'</div></div>';
+  h += '<span class="ec-exam-tag">'+(EXAM_LABELS[q.examId]||'')+'</span>';
+  h += '<span class="miykud-tag '+q.miykud+'">'+q.miykudText+'</span>';
+  h += '</div><div class="ec-body">'+q.questionHTML+imgH+'</div></div>';
+
+  // Hints (code 1)
+  var hh='<div class="hints-list">';
+  for(var hi=0;hi<q.hints.length;hi++){var ht=q.hints[hi],r=revealed[idx+'_'+hi];
+    hh+='<div class="hint-row"><button class="hint-btn'+(r?' revealed':'')+'" onclick="revealHint('+idx+','+hi+')">';
+    hh+='<span class="hint-num">'+(hi+1)+'</span><span class="hint-btn-text">'+ht.title+(r?'':' ← לחץ')+'</span></button>';
+    hh+='<div class="hint-content'+(r?' open':'')+'">'+ht.text+'</div></div>';
+  }
+  hh+='</div><button class="unlock-btn" onclick="unlock('+idx+',1)">הבנתי — הצג פטרון ←</button>';
+  h += section(idx,'hints','?? רמזים',hh,setHas(ul,'hints'),false);
+
+  // Pattern (code 2)
+  var ph='<ol class="p-steps">';
+  for(var pi=0;pi<q.patternSteps.length;pi++){var ps=q.patternSteps[pi];
+    ph+='<li class="p-step"><span class="p-num">'+(pi+1)+'</span><span><span class="p-key">'+ps.key+':</span> '+ps.body+'</span></li>';
+  }
+  ph+='</ol><button class="unlock-btn" onclick="unlock('+idx+',2)">הבנתי — הצג סיפור ←</button>';
+  h += section(idx,'pattern','?? פטרון',ph,setHas(ul,'pattern'),!setHas(ul,'pattern'));
+
+  // Story + mnem (code 3)
+  var sh=(q.storyHTML||'')+buildMnem(q.mnem);
+  sh+='<button class="unlock-btn" style="margin-top:12px" onclick="unlock('+idx+',3)">מוכן — הצג פתרון מלא ←</button>';
+  h += section(idx,'story','✨ סיפור ומנמוניקה',sh,setHas(ul,'story'),!setHas(ul,'story'));
+
+  // Solution
+  var sl='<div class="sol-wrap">';
+  for(var qi2=0;qi2<q.subQAs.length;qi2++) sl+=buildSubQA(q.subQAs[qi2]);
+  sl+='</div>';
+  // Next question navigation
+  var fq2 = filteredQuestions();
+  var localIdx2 = fq2.indexOf(q);
+  if(localIdx2 < fq2.length-1){
+    var nq=fq2[localIdx2+1], nIdx=QUESTIONS.indexOf(nq);
+    sl+='<button class="unlock-btn green" onclick="showQ('+nIdx+')" style="margin-top:12px">';
+    sl+='שאלה '+nq.id+': '+nq.title+' →</button>';
+  } else {
+    sl+='<div class="done-banner"><div class="done-icon">??</div><div class="done-text">סיימת!</div></div>';
+  }
+  h += section(idx,'solution','?? פתרון מלא',sl,setHas(ul,'solution'),!setHas(ul,'solution'));
+
+  document.getElementById('mainContent').innerHTML = h;
+  ul.forEach(function(s){
+    var b=document.getElementById('B_'+idx+'_'+s),a=document.getElementById('A_'+idx+'_'+s);
+    if(b)b.classList.add('open');if(a)a.classList.add('open');
+  });
+  }catch(e){document.getElementById('mainContent').innerHTML='<div style="padding:20px;color:red">שגיאה: '+e.message+'</div>';console.error(e);}
+}
+
+function section(qi,sec,label,content,unlkd,locked){
+  var ls=locked?' locked':'', oc=locked?'':' onclick="toggleSec('+qi+','+JSON.stringify(sec)+')"';
+  var bc=locked?'<p style="color:#8a7a60;font-size:13px">פתח את השלב הקודם...</p>':content;
+  var pts=label.split(' '),icon=pts[0],lbl=pts.slice(1).join(' ');
+  return '<div class="section'+ls+'" data-sec="'+sec+'">'
+    +'<div class="sec-head"'+oc+'><div class="sec-left"><span class="sec-icon">'+icon+'</span><span>'+lbl+'</span></div>'
+    +'<span class="sec-arrow" id="A_'+qi+'_'+sec+'">▼</span></div>'
+    +'<div class="sec-body" id="B_'+qi+'_'+sec+'">'+bc+'</div></div>';
+}
+
+function buildMnem(m){
+  if(!m)return'';
+  var L='';for(var i=0;i<m.letters.length;i++){var l=m.letters[i];L+='<span class="ml" style="color:'+l.c+'">'+l.l+'</span><span class="mw">'+l.w+'</span>';}
+  var C='';for(var i=0;i<m.cards.length;i++){var c=m.cards[i];C+='<div class="mc '+c.c+'"><div class="mc-l">'+c.l+'</div><div class="mc-t">'+c.t+'</div><div class="mc-b">'+c.b+'</div></div>';}
+  return '<div class="mnem-box"><div class="mnem-title">?? מנמוניקה</div><div class="mnem-letters">'+L+'</div><div class="mnem-cards">'+C+'</div></div>';
+}
+
+function buildSubQA(qa){
+  var st='<ul class="ans-steps">';for(var i=0;i<qa.steps.length;i++){var s=qa.steps[i];st+='<li class="ans-step"><span class="sn">'+s.n+'</span><span>'+s.t+'</span></li>';}st+='</ul>';
+  var im=(qa.imgKey&&IMAGES[qa.imgKey])?'<div class="sol-img"><img src="data:image/png;base64,'+IMAGES[qa.imgKey]+'" alt=""><div class="sol-img-cap">'+(qa.imgCap||'')+'</div></div>':'';
+  var hn=qa.hint?'<div class="hint-box">?? '+qa.hint+'</div>':'';
+  var wn=qa.warn?'<div class="warn-box"><div class="warn-title">⚠️ טעות נפוצה</div><div class="warn-text">'+qa.warn+'</div></div>':'';
+  return '<div class="sub-block"><div class="sub-q-row"><span class="sub-badge">'+qa.badge+'</span><span class="sub-q-text">'+qa.q+'</span></div><div class="sub-ans-row"><div class="ans-top"><span class="ans-tag">✅</span><span class="ans-lbl">תשובה:</span><span class="final-val">'+qa.final+'</span></div>'+im+st+hn+wn+'</div></div>';
+}
+
+// ── ACTIONS ─────────────────────────────────────────
+function toggleSec(qi,sec){var b=document.getElementById('B_'+qi+'_'+sec),a=document.getElementById('A_'+qi+'_'+sec);if(!b)return;b.classList.toggle('open');if(a)a.classList.toggle('open');}
+function unlock(qi,sec){if(typeof sec==='number')sec=SEC_NAMES[sec]||'hints';getUnlocked(qi).add(sec);renderQ(qi);setTimeout(function(){var el=document.getElementById('B_'+qi+'_'+sec);if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});},120);}
+function revealHint(qi,hi){revealed[qi+'_'+hi]=true;renderQ(qi);}
+
+// ── KEYBOARD ─────────────────────────────────────────
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT')return;
+  var fq=filteredQuestions();
+  var li=fq.indexOf(QUESTIONS[currentIdx]);
+  if(e.key==='ArrowLeft'&&li<fq.length-1){e.preventDefault();showQ(QUESTIONS.indexOf(fq[li+1]));}
+  if(e.key==='ArrowRight'&&li>0){e.preventDefault();showQ(QUESTIONS.indexOf(fq[li-1]));}
+  if(e.key>='1'&&e.key<='9'){var n=parseInt(e.key)-1;if(n<fq.length)showQ(QUESTIONS.indexOf(fq[n]));}
+  if(e.key==='f'||e.key==='F'){
+    var filters=['all','special2021','winter2026','summer2020a','summer2020b','summer2021b','summer2022a','summer2022b','summer2023a','summer2023b','summer2023sp','summer2024b','summer2025b','winter2021','winter2022','winter2022feb','winter2023','winter2024','winter2025'];
+    var ci=filters.indexOf(currentFilter);
+    filterExam(filters[(ci+1)%filters.length]);
+  }
+});
+
+// ── SWIPE (mobile) ────────────────────────────────────
+var tx=0;
+document.addEventListener('touchstart',function(e){tx=e.changedTouches[0].screenX;},{passive:true});
+document.addEventListener('touchend',function(e){
+  var dx=e.changedTouches[0].screenX-tx;
+  if(Math.abs(dx)<70)return;
+  var fq=filteredQuestions(),li=fq.indexOf(QUESTIONS[currentIdx]);
+  if(dx<-70&&li<fq.length-1)showQ(QUESTIONS.indexOf(fq[li+1]));
+  if(dx>70&&li>0)showQ(QUESTIONS.indexOf(fq[li-1]));
+},{passive:true});
+
+// ── INIT ─────────────────────────────────────────────
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',function(){buildSidebar();buildBottomNav();showQ(0);});
+}else{
+  buildSidebar();buildBottomNav();showQ(0);
+}
+// ── PWA: Register Service Worker ──────────────────────
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(function(reg){
+    console.log('SW registered', reg.scope);
+  }).catch(function(err){
+    console.log('SW failed', err);
+  });
+}
+
+// ── PWA: Install prompt ──────────────────────────────
+var deferredPrompt;
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();
+  deferredPrompt=e;
+  // Show install button in topbar
+  var btn=document.createElement('button');
+  btn.textContent='\u05d4\u05ea\u05e7\u05df';
+  btn.style.cssText='background:#c8983a;color:#1a1208;border:none;padding:4px 12px;border-radius:6px;font-family:IBM Plex Mono,monospace;font-size:11px;font-weight:700;cursor:pointer;margin-right:8px';
+  btn.onclick=function(){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(r){
+      if(r.outcome==='accepted')btn.remove();
+      deferredPrompt=null;
+    });
+  };
+  var tb=document.querySelector('.topbar');
+  if(tb)tb.appendChild(btn);
+});
 </script>
 </body>
 </html>
