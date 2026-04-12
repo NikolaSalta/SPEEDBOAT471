@@ -122,14 +122,6 @@ Designed for students with ADHD:
 
 ---
 
-## 🔑 Access
-
-**Live:** [https://nikolasalta.github.io/SPEEDBOAT471/](https://nikolasalta.github.io/SPEEDBOAT471/)
-
-**Password:** `Aayabdex7788`
-
----
-
 ## 🔄 How to Add More Exams
 
 1. Create a folder with question PDFs (שאלה 1.pdf ... שאלה 8.pdf)
