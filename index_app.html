@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Speedboat">
+<meta name="apple-mobile-web-app-title" content="471 כל המבחנים">
 <meta name="theme-color" content="#1a1208">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a1208'/><text x='50' y='38' text-anchor='middle' fill='%23c8983a' font-size='28' font-weight='900'>471</text><text x='50' y='62' text-anchor='middle' fill='%23f5e6c8' font-size='14' font-weight='700'>בגרות</text></svg>">
 <meta name="description" content="141 שאלות מ-18 מבחני בגרות 471 עם פתרונות מלאים">
-<title>Speedboat — 471 בגרות</title>
+<title>471 — כל המבחנים</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -198,7 +198,7 @@ body{font-family:'Frank Ruhl Libre',Georgia,serif;background:#f5f2ed;color:#1a12
 <body>
 <div class="topbar">
   <div>
-    <div class="topbar-title">Speedboat</div>
+    <div class="topbar-title">471 — כל המבחנים</div>
     <div class="topbar-sub" id="topbarSub">18 מבחנים | 141 שאלות</div>
   </div>
   <div class="topbar-progress">
@@ -3581,6 +3581,15 @@ function renderQ(idx){
   var sl='<div class="sol-wrap">';
   for(var qi2=0;qi2<q.subQAs.length;qi2++) sl+=buildSubQA(q.subQAs[qi2]);
   sl+='</div>';
+  // Show ALL solution PDF pages
+  if(q.questionImgKey){
+    var baseKey = q.questionImgKey.replace(/_p\d+$/, '');
+    var pg = 2;
+    while(IMAGES[baseKey + '_p' + pg]){
+      sl += '<div class="sol-img"><img src="data:image/png;base64,' + IMAGES[baseKey + '_p' + pg] + '" alt=""><div class="sol-img-cap">פתרון מלא — עמוד ' + pg + '</div></div>';
+      pg++;
+    }
+  }
   // Next question navigation
   var fq2 = filteredQuestions();
   var localIdx2 = fq2.indexOf(q);
@@ -3692,20 +3701,16 @@ window.addEventListener('beforeinstallprompt',function(e){
   if(tb)tb.appendChild(btn);
 });
 
-// ── Load image data from external chunks ──
+// Load image chunks
 (function(){
-  var chunks = ['images1.js','images2.js'];
-  var loaded = 0;
+  var chunks=['images1.js','images2.js'];
+  var loaded=0;
   chunks.forEach(function(src){
-    var s = document.createElement('script');
-    s.src = src;
-    s.onload = function(){
+    var s=document.createElement('script');
+    s.src=src;
+    s.onload=function(){
       loaded++;
-      if(loaded === chunks.length){
-        console.log('All images loaded');
-        // Re-render current question to show images
-        if(typeof showQ === 'function' && typeof currentIdx !== 'undefined') showQ(currentIdx);
-      }
+      if(loaded===chunks.length && typeof showQ==='function' && typeof currentIdx!=='undefined') showQ(currentIdx);
     };
     document.body.appendChild(s);
   });
