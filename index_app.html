@@ -3691,6 +3691,25 @@ window.addEventListener('beforeinstallprompt',function(e){
   var tb=document.querySelector('.topbar');
   if(tb)tb.appendChild(btn);
 });
+
+// ── Load image data from external chunks ──
+(function(){
+  var chunks = ['images1.js','images2.js'];
+  var loaded = 0;
+  chunks.forEach(function(src){
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = function(){
+      loaded++;
+      if(loaded === chunks.length){
+        console.log('All images loaded');
+        // Re-render current question to show images
+        if(typeof showQ === 'function' && typeof currentIdx !== 'undefined') showQ(currentIdx);
+      }
+    };
+    document.body.appendChild(s);
+  });
+})();
 </script>
 </body>
 </html>
