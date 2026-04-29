@@ -3701,7 +3701,7 @@ window.addEventListener('beforeinstallprompt',function(e){
   if(tb)tb.appendChild(btn);
 });
 
-(function(){['images1.js','images2.js'].forEach(function(s){var e=document.createElement('script');e.src=s;e.onload=function(){if(typeof showQ==='function'&&typeof currentIdx!=='undefined')showQ(currentIdx)};document.body.appendChild(e)})})();
+(function(){['images1.js','images2.js','flashcards.js'].forEach(function(s){var e=document.createElement('script');e.src=s;e.onload=function(){if(s==='images2.js'&&typeof showQ==='function'&&typeof currentIdx!=='undefined')showQ(currentIdx)};document.body.appendChild(e)})})();
 </script>
 </body>
 </html>
